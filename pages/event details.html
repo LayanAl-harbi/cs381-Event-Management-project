@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YIC Events | Event Details</title>
+  <link rel="stylesheet" href="../css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <span class="logo">YIC Events</span>
+      <nav class="top-nav">
+        <a href="../pages/home.html">Home</a>
+        <a href="events.html">Events</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="login.html">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="event-details-card">
+      <h2 id="detailTitle">Event Title</h2>
+
+      <div class="event-details-meta">
+        <div class="event-detail-item">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 8V12L15 15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span id="detailDate">Date: May 23, 2024</span>
+        </div>
+        <div class="event-detail-item">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 7H21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 7V21H17V7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 11L12 17" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span id="detailLocation">Location: Tichyry Hall</span>
+        </div>
+        <div class="event-detail-item">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 4H20V20H4V4Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 8H20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span id="detailCategory">Category: Workshop</span>
+        </div>
+      </div>
+
+      <div class="event-details-description">
+        <p><strong>Description:</strong></p>
+        <p id="detailDescription">Join us for an engaging workshop where you will learn event planning techniques, collaboration skills, and interactive activities that bring the community together.</p>
+      </div>
+
+      <button id="detailRegisterBtn" class="event-details-button">Register</button>
+    </section>
+  </main>
+
+  <div class="modal-overlay" id="confirmationModal">
+    <div class="modal-card">
+      <h3 id="modalTitle">Confirmation</h3>
+      <p id="modalMessage">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn yes-btn" onclick="confirmModalChoice(true)">Yes</button>
+        <button class="btn no-btn" onclick="confirmModalChoice(false)">No</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p>YIC Events</p>
+    <p>Privacy Policy</p>
+  </footer>
+  <script src="../js/script.js"></script>
+</body>
+</html>
