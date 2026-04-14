@@ -496,28 +496,22 @@ function renderRegistrations(container, registrations, isNew) {
     viewBtn.className = 'view-btn';
     viewBtn.textContent = 'View';
     viewBtn.addEventListener('click', function() {
-      if (reg.selectedEventId) {
-        window.location.href = `event details.html?id=${encodeURIComponent(reg.selectedEventId)}`;
+      if (reg.event) {
+        showEventDetailsModal(reg.event);
       }
     });
 
-    const actionBtn = document.createElement('button');
+    actions.appendChild(viewBtn);
+
     if (isNew) {
+      const actionBtn = document.createElement('button');
       actionBtn.className = 'delete-btn';
       actionBtn.textContent = 'Mark Past';
       actionBtn.addEventListener('click', function() {
         markRegistrationPast(reg.id);
       });
-    } else {
-      actionBtn.className = 'feedback-btn';
-      actionBtn.textContent = 'Feedback';
-      actionBtn.addEventListener('click', function() {
-        alert('Feedback will be added later for this event.');
-      });
+      actions.appendChild(actionBtn);
     }
-
-    actions.appendChild(viewBtn);
-    actions.appendChild(actionBtn);
 
     item.appendChild(meta);
     item.appendChild(actions);
@@ -542,4 +536,24 @@ function markRegistrationPast(registrationId) {
   });
   localStorage.setItem('registrations', JSON.stringify(updated));
   initializeDashboardPage();
+}
+
+function showEventDetailsModal(event) {
+  const modal = document.getElementById('eventDetailsModal');
+  if (!modal) return;
+
+  document.getElementById('modalEventTitle').textContent = event.title;
+  document.getElementById('modalEventDate').textContent = event.date;
+  document.getElementById('modalEventLocation').textContent = event.location;
+  document.getElementById('modalEventCategory').textContent = event.category;
+  document.getElementById('modalEventDescription').textContent = event.description;
+
+  modal.classList.add('active');
+}
+
+function closeEventDetailsModal() {
+  const modal = document.getElementById('eventDetailsModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
 }

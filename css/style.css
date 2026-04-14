@@ -696,6 +696,7 @@ body {
   box-shadow: 0 24px 60px rgba(34, 60, 80, 0.16);
   padding: 28px 26px;
   text-align: center;
+  position: relative;
 }
 
 .modal-card h3 {
@@ -721,6 +722,44 @@ body {
   min-width: 110px;
 }
 
+.modal-event-details {
+  text-align: left;
+  margin: 20px 0;
+}
+
+.modal-event-details p {
+  margin: 12px 0;
+  color: #4b5c7a;
+}
+
+.modal-event-details strong {
+  color: #23354f;
+}
+
+.close-modal {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #4b5c7a;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-modal:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: #23354f;
+}
+
 /* Dashboard */
 .dashboard-card {
   background: rgba(255, 255, 255, 0.92);
@@ -733,10 +772,37 @@ body {
   box-shadow: 0 24px 60px rgba(57, 81, 118, 0.14);
 }
 
+.dashboard-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .dashboard-title h2 {
-  margin: 0 0 28px;
+  margin: 0;
   color: #23354f;
   font-size: 2rem;
+}
+
+.dashboard-events-btn {
+  padding: 12px 24px;
+  background: #5f7fb3;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 18px rgba(31, 95, 122, 0.28);
+}
+
+.dashboard-events-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(31, 95, 122, 0.35);
 }
 
 .dashboard-section {

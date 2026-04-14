@@ -22,7 +22,8 @@
   <main class="container">
     <section class="dashboard-card" id="dashboardPage">
       <div class="dashboard-title">
-        <h2 id="dashboardWelcome">Welcome, dear user!
+        <h2 id="dashboardWelcome">Welcome, dear user!</h2>
+        <a href="events.html" class="dashboard-events-btn">Browse Events</a>
       </div>
 
       <div class="dashboard-section">
@@ -41,9 +42,24 @@
     </section>
   </main>
 
+  <div class="modal-overlay" id="eventDetailsModal">
+    <div class="modal-card">
+      <button class="close-modal" onclick="closeEventDetailsModal()">✕</button>
+      <h3 id="modalEventTitle">Event Title</h3>
+            
+      <div class="modal-event-details">
+        <p><strong>Date:</strong> <span id="modalEventDate"></span></p>
+        <p><strong>Location:</strong> <span id="modalEventLocation"></span></p>
+        <p><strong>Category:</strong> <span id="modalEventCategory"></span></p>
+        <p><strong>Description:</strong></p>
+        <p id="modalEventDescription"></p>
+      </div>
+    </div>
+  </div>
+
   <footer class="site-footer">
     <p>YIC Events</p>
-    <p>Privacy Policy</p>
+    <p>Layan 441500004 ~ Nada 441500071</p>
   </footer>
   <script src="../js/script.js"></script>
 </body>
