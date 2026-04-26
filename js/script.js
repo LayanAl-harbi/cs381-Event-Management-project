@@ -1,4 +1,4 @@
-const eventData = [
+const baseEventData = [
   {
     id: 'basketball-tournament',
     title: 'Basketball Tournament',
@@ -49,6 +49,51 @@ const eventData = [
   }
 ];
 
+const adminEmployeeAccount = {
+  employeeId: 'EMP001',
+  password: 'admin123'
+};
+
+function getAdminEvents() {
+  return JSON.parse(localStorage.getItem('adminEvents') || '[]');
+}
+
+function getAllEvents() {
+  const deletedEventIds = JSON.parse(localStorage.getItem('deletedEventIds') || '[]');
+  return [...baseEventData, ...getAdminEvents()].filter(event => !deletedEventIds.includes(event.id));
+}
+
+function getStoredUsers() {
+  return JSON.parse(localStorage.getItem('users') || '[]');
+}
+
+function isAdminAuthenticated() {
+  return localStorage.getItem('isAdminAuthenticated') === 'true';
+}
+
+function setAdminAuthenticated(isAuthenticated) {
+  localStorage.setItem('isAdminAuthenticated', isAuthenticated ? 'true' : 'false');
+}
+
+function clearLoginState() {
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('selectedEventId');
+  localStorage.setItem('isAdminAuthenticated', 'false');
+}
+
+function saveUser(userData) {
+  const users = getStoredUsers();
+  const updatedUsers = users.filter(user => user.studentId !== userData.studentId && user.email !== userData.email);
+  updatedUsers.push(userData);
+  localStorage.setItem('users', JSON.stringify(updatedUsers));
+}
+
+function saveAdminEvent(eventData) {
+  const adminEvents = getAdminEvents();
+  adminEvents.push(eventData);
+  localStorage.setItem('adminEvents', JSON.stringify(adminEvents));
+}
+
 function goToEvents() {
   document.getElementById('accountModal').classList.add('active');
 }
@@ -74,6 +119,117 @@ function getCurrentUser() {
     return JSON.parse(storedUser);
   }
   return null;
+}
+
+function postToPhp(url, data) {
+  const payload = new FormData();
+  Object.entries(data).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      payload.append(key, value);
+    }
+  });
+
+  return fetch(url, {
+    method: 'POST',
+    body: payload,
+    credentials: 'same-origin',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  }).then(response => response.text().then(text => {
+    let result = null;
+    try {
+      result = JSON.parse(text);
+    } catch (error) {
+      result = null;
+    }
+
+    if (result) {
+      return result;
+    }
+    if (!response.ok) {
+      throw new Error('Server request failed.');
+    }
+    return null;
+  }));
+}
+
+function saveUserRegistrationOnServer(formData) {
+  return postToPhp('../php/register_process.php', {
+    name: formData.name,
+    student_id: formData.studentId,
+    email: formData.email,
+    major: formData.major,
+    password: formData.password,
+    date_of_birth: formData.dateOfBirth,
+    event_id: formData.selectedEventId
+  });
+}
+
+function saveEventRegistrationOnServer(eventId, user) {
+  return postToPhp('../php/register_event.php', {
+    event_id: eventId,
+    student_id: user ? user.studentId : ''
+  });
+}
+
+function loginUserOnServer(studentId, password) {
+  return postToPhp('../php/login_process.php', {
+    student_id: studentId,
+    password: password
+  });
+}
+
+function loginAdminOnServer(employeeId, password) {
+  return postToPhp('../php/admin_login.php', {
+    employee_id: employeeId,
+    password: password
+  });
+}
+
+function saveAdminEventOnServer(eventData, dateValue) {
+  return postToPhp('../php/add_event.php', {
+    event_id: eventData.id,
+    name: eventData.title,
+    date: dateValue,
+    location: eventData.location,
+    category: eventData.category,
+    description: eventData.description
+  });
+}
+
+function saveAdminUserOnServer(userData) {
+  return postToPhp('../php/add_user.php', {
+    name: userData.name,
+    student_id: userData.studentId,
+    email: userData.email,
+    major: userData.major,
+    password: userData.password,
+    date_of_birth: userData.dateOfBirth,
+    role: 'user'
+  });
+}
+
+function initializeLogoutLinks() {
+  document.querySelectorAll('a[href$="logout.php"]').forEach(link => {
+    if (link.dataset.logoutBound) return;
+    link.dataset.logoutBound = 'true';
+
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      clearLoginState();
+
+      fetch(this.href, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store'
+      }).catch(function() {
+        // The PHP file may be unavailable when the project is opened without a PHP server.
+      }).finally(function() {
+        window.location.href = 'login.html';
+      });
+    });
+  });
 }
 
 function showConfirmModal(message, callback) {
@@ -134,20 +290,39 @@ function registerForEvent(eventId, eventTitle) {
       selectedEventId: eventId
     };
 
-    saveRegistration(registrationData);
-    showConfirmModal('Registration successful! Redirect to your dashboard?', function(goToDashboard) {
-      if (goToDashboard) {
-        window.location.href = 'dashboard.html';
+    const finishEventRegistration = function() {
+      saveRegistration(registrationData);
+      showConfirmModal('Registration successful! Redirect to your dashboard?', function(goToDashboard) {
+        if (goToDashboard) {
+          window.location.href = 'dashboard.html';
+        }
+      });
+    };
+
+    saveEventRegistrationOnServer(eventId, currentUser).then(function(result) {
+      if (result && result.success === false && result.message === 'You are already registered for this event.') {
+        alert(result.message);
+        return;
       }
+      finishEventRegistration();
+    }).catch(function() {
+      finishEventRegistration();
     });
   });
 }
 
 // Events page functionality
 document.addEventListener('DOMContentLoaded', function() {
+  initializeLogoutLinks();
+
   if (document.getElementById('eventsGrid')) {
+    renderEventsGrid();
     initializeEventFilters();
     attachEventDetailLinks();
+  }
+
+  if (document.getElementById('calendarPage')) {
+    initializeCalendarPage();
   }
 
   if (document.querySelector('.event-details-card')) {
@@ -160,6 +335,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
   if (document.getElementById('dashboardPage')) {
     initializeDashboardPage();
+  }
+
+  if (document.getElementById('adminPage')) {
+    initializeAdminPage();
   }
 
   if (document.getElementById('loginForm')) {
@@ -263,7 +442,8 @@ function attachEventDetailLinks() {
 
     if (detailButton) {
       detailButton.addEventListener('click', function() {
-        window.location.href = `event details.html?id=${encodeURIComponent(eventId)}`;
+       const event = getAllEvents().find(e => e.id === eventId);
+     showEventDetailsModal(event);
       });
     }
 
@@ -278,7 +458,7 @@ function attachEventDetailLinks() {
 function initializeEventDetailsPage() {
   const params = new URLSearchParams(window.location.search);
   const eventId = params.get('id');
-  const event = eventData.find(item => item.id === eventId);
+  const event = getAllEvents().find(item => item.id === eventId);
 
   if (event) {
     populateEventDetails(event);
@@ -342,16 +522,23 @@ function initializeRegistrationPage() {
   const eventTitle = document.getElementById('eventTitle');
   const eventDate = document.getElementById('eventDate');
   const registrationForm = document.getElementById('registrationForm');
+  const selectedEventInput = document.getElementById('selectedEventIdInput');
   let selectedEvent = null;
 
   if (selectedEventId) {
-    selectedEvent = eventData.find(item => item.id === selectedEventId);
+    selectedEvent = getAllEvents().find(item => item.id === selectedEventId);
     if (selectedEvent) {
       selectedEventDiv.style.display = 'block';
       eventTitle.textContent = selectedEvent.title;
       eventDate.textContent = `Date: ${selectedEvent.date}`;
+      if (selectedEventInput) {
+        selectedEventInput.value = selectedEvent.id;
+      }
     } else {
       localStorage.removeItem('selectedEventId');
+      if (selectedEventInput) {
+        selectedEventInput.value = '';
+      }
     }
   }
 
@@ -368,30 +555,51 @@ function initializeRegistrationPage() {
       selectedEventId: selectedEvent ? selectedEvent.id : null
     };
 
-    localStorage.setItem('currentUser', JSON.stringify({
-      name: formData.name,
-      studentId: formData.studentId,
-      email: formData.email,
-      major: formData.major,
-      password: formData.password,
-      dateOfBirth: formData.dateOfBirth
-    }));
+    const finishRegistration = function() {
+      localStorage.setItem('currentUser', JSON.stringify({
+        name: formData.name,
+        studentId: formData.studentId,
+        email: formData.email,
+        major: formData.major,
+        password: formData.password,
+        dateOfBirth: formData.dateOfBirth
+      }));
 
-    if (selectedEvent) {
-      saveRegistration(formData);
-      localStorage.removeItem('selectedEventId');
-      showConfirmModal('Registration successful! Continue to your dashboard?', function(confirmed) {
-        if (confirmed) {
-          window.location.href = 'dashboard.html';
-        }
+      saveUser({
+        name: formData.name,
+        studentId: formData.studentId,
+        email: formData.email,
+        major: formData.major,
+        password: formData.password,
+        dateOfBirth: formData.dateOfBirth
       });
-    } else {
-      showConfirmModal('Account created successfully! Continue to your dashboard?', function(confirmed) {
-        if (confirmed) {
-          window.location.href = 'dashboard.html';
-        }
-      });
-    }
+
+      if (selectedEvent) {
+        saveRegistration(formData);
+        localStorage.removeItem('selectedEventId');
+        showConfirmModal('Registration successful! Continue to your dashboard?', function(confirmed) {
+          if (confirmed) {
+            window.location.href = 'dashboard.html';
+          }
+        });
+      } else {
+        showConfirmModal('Account created successfully! Continue to your dashboard?', function(confirmed) {
+          if (confirmed) {
+            window.location.href = 'dashboard.html';
+          }
+        });
+      }
+    };
+
+    saveUserRegistrationOnServer(formData).then(function(result) {
+      if (result && result.success === false) {
+        alert(result.message || 'Registration could not be saved.');
+        return;
+      }
+      finishRegistration();
+    }).catch(function() {
+      finishRegistration();
+    });
   });
 }
 
@@ -419,26 +627,61 @@ function initializeLoginPage() {
     const studentId = document.getElementById('loginStudentId').value.trim();
     const password = document.getElementById('loginPassword').value;
 
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      showConfirmModal('No registered user found. Would you like to create an account now?', function(confirmed) {
-        if (confirmed) {
-          window.location.href = 'register.html';
-        }
-      });
-      return;
-    }
-
-    if (studentId === currentUser.studentId && password === currentUser.password) {
+    const finishLogin = function(user) {
+      localStorage.setItem('currentUser', JSON.stringify(user));
       showConfirmModal('Login successful! Go to your dashboard?', function(confirmed) {
         if (confirmed) {
           window.location.href = 'dashboard.html';
         }
       });
-      return;
-    }
+    };
 
-    alert('Invalid login credentials. Please try again or register a new account.');
+    const fallbackLocalLogin = function() {
+      const matchedUser = getStoredUsers().find(user => user.studentId === studentId && user.password === password);
+      const currentUser = getCurrentUser();
+
+      if (matchedUser) {
+        finishLogin(matchedUser);
+        return;
+      }
+
+      if (currentUser && studentId === currentUser.studentId && password === currentUser.password) {
+        finishLogin(currentUser);
+        return;
+      }
+
+      showConfirmModal('No registered user found. Would you like to create an account now?', function(confirmed) {
+        if (confirmed) {
+          window.location.href = 'register.html';
+        }
+      });
+    };
+
+    loginUserOnServer(studentId, password).then(function(result) {
+      if (result && result.success && result.user) {
+        const serverUser = {
+          name: result.user.name || studentId,
+          studentId: result.user.student_id || studentId,
+          email: result.user.email || '',
+          major: result.user.major || '',
+          password: password,
+          dateOfBirth: result.user.date_of_birth || ''
+        };
+
+        saveUser(serverUser);
+        finishLogin(serverUser);
+        return;
+      }
+
+      if (result && result.success === false) {
+        alert(result.message || 'Invalid login credentials.');
+        return;
+      }
+
+      fallbackLocalLogin();
+    }).catch(function() {
+      fallbackLocalLogin();
+    });
   });
 }
 
@@ -451,6 +694,11 @@ function initializeDashboardPage() {
   if (!newContainer || !pastContainer || !welcome) return;
 
   const currentUser = getCurrentUser();
+  if (!currentUser) {
+    window.location.href = 'login.html';
+    return;
+  }
+
   welcome.textContent = `Welcome, ${currentUser.name}`;
 
   const sortedRegistrations = registrations.slice().sort((a, b) => new Date(b.registeredAt) - new Date(a.registeredAt));
@@ -460,7 +708,7 @@ function initializeDashboardPage() {
   const pastRegistrations = [];
 
   sortedRegistrations.forEach(reg => {
-    const event = eventData.find(item => item.id === reg.selectedEventId);
+    const event = getAllEvents().find(item => item.id === reg.selectedEventId);
     const isPastEvent = reg.markedPast || (event ? new Date(event.date) < today : false);
     const targetList = isPastEvent ? pastRegistrations : newRegistrations;
     targetList.push({ ...reg, event });
@@ -468,6 +716,202 @@ function initializeDashboardPage() {
 
   renderRegistrations(newContainer, newRegistrations, true);
   renderRegistrations(pastContainer, pastRegistrations, false);
+}
+
+function initializeAdminPage() {
+  const adminLoginGate = document.getElementById('adminLoginGate');
+  const adminContent = document.getElementById('adminContent');
+  const adminLoginForm = document.getElementById('adminLoginForm');
+  const adminLogoutBtn = document.getElementById('adminLogoutBtn');
+  const adminEventsList = document.getElementById('adminEventsList');
+  const adminRegistrations = document.getElementById('adminRegistrations');
+  const adminUsers = document.getElementById('adminUsers');
+  const adminEventForm = document.getElementById('adminEventForm');
+  const adminUserForm = document.getElementById('adminUserForm');
+
+  if (adminLoginForm && !adminLoginForm.dataset.bound) {
+    adminLoginForm.dataset.bound = 'true';
+    adminLoginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const adminId = document.getElementById('adminId').value.trim();
+      const password = document.getElementById('adminPassword').value;
+
+      if (adminId === adminEmployeeAccount.employeeId && password === adminEmployeeAccount.password) {
+        loginAdminOnServer(adminId, password).finally(function() {
+          setAdminAuthenticated(true);
+          adminLoginForm.reset();
+          initializeAdminPage();
+        });
+        return;
+      }
+
+      alert('Invalid admin login. Please try again.');
+    });
+  }
+
+  if (adminLogoutBtn && !adminLogoutBtn.dataset.bound) {
+    adminLogoutBtn.dataset.bound = 'true';
+    adminLogoutBtn.addEventListener('click', function() {
+      setAdminAuthenticated(false);
+      initializeAdminPage();
+    });
+  }
+
+  if (adminLoginGate && adminContent) {
+    const hasAccess = isAdminAuthenticated();
+    adminLoginGate.style.display = hasAccess ? 'none' : 'block';
+    adminContent.style.display = hasAccess ? 'block' : 'none';
+
+    if (!hasAccess) {
+      return;
+    }
+  }
+
+  if (!adminEventsList || !adminRegistrations || !adminUsers) return;
+
+  const registrations = JSON.parse(localStorage.getItem('registrations') || '[]');
+
+  const totalEvents = document.getElementById('adminTotalEvents');
+  const totalUsers = document.getElementById('adminTotalUsers');
+  const totalRegistrations = document.getElementById('adminTotalRegistrations');
+
+  initializeAdminTabs();
+
+  if (totalEvents) {
+    totalEvents.textContent = String(getAllEvents().length);
+  }
+
+  if (totalRegistrations) {
+    totalRegistrations.textContent = String(registrations.length);
+  }
+
+  const usersMap = new Map();
+
+  registrations.forEach(reg => {
+    const key = reg.studentId || reg.email || reg.name;
+    if (!usersMap.has(key)) {
+      usersMap.set(key, {
+        name: reg.name || 'Unknown User',
+        studentId: reg.studentId || 'N/A',
+        email: reg.email || 'N/A',
+        major: reg.major || 'N/A'
+      });
+    }
+  });
+
+  const currentUser = getCurrentUser();
+  if (currentUser) {
+    const currentKey = currentUser.studentId || currentUser.email || currentUser.name;
+    if (!usersMap.has(currentKey)) {
+      usersMap.set(currentKey, {
+        name: currentUser.name || 'Unknown User',
+        studentId: currentUser.studentId || 'N/A',
+        email: currentUser.email || 'N/A',
+        major: currentUser.major || 'N/A'
+      });
+    }
+  }
+
+  getStoredUsers().forEach(user => {
+    const key = user.studentId || user.email || user.name;
+    if (!usersMap.has(key)) {
+      usersMap.set(key, {
+        name: user.name || 'Unknown User',
+        studentId: user.studentId || 'N/A',
+        email: user.email || 'N/A',
+        major: user.major || 'N/A'
+      });
+    }
+  });
+
+  const users = Array.from(usersMap.values());
+
+  if (totalUsers) {
+    totalUsers.textContent = String(users.length);
+  }
+
+  renderAdminEvents(adminEventsList);
+  renderAdminRegistrations(adminRegistrations, registrations);
+  renderAdminUsers(adminUsers, users);
+
+  if (adminEventForm && !adminEventForm.dataset.bound) {
+    adminEventForm.dataset.bound = 'true';
+    adminEventForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const title = document.getElementById('adminEventTitle').value.trim();
+      const dateValue = document.getElementById('adminEventDate').value;
+      const location = document.getElementById('adminEventLocation').value.trim();
+      const category = document.getElementById('adminEventCategory').value;
+      const description = document.getElementById('adminEventDescription').value.trim();
+
+      const newEvent = {
+        id: createEventId(title),
+        title: title,
+        date: formatDisplayDate(dateValue),
+        location: location,
+        category: category,
+        description: description
+      };
+
+      const finishAddEvent = function(eventId) {
+        if (eventId) {
+          newEvent.id = String(eventId);
+        }
+
+        saveAdminEvent(newEvent);
+        adminEventForm.reset();
+        alert('Event added successfully.');
+        initializeAdminPage();
+      };
+
+      saveAdminEventOnServer(newEvent, dateValue).then(function(result) {
+        if (result && result.success === false) {
+          alert(result.message || 'Event could not be saved.');
+          return;
+        }
+
+        finishAddEvent(result && result.event_id);
+      }).catch(function() {
+        finishAddEvent();
+      });
+    });
+  }
+
+  if (adminUserForm && !adminUserForm.dataset.bound) {
+    adminUserForm.dataset.bound = 'true';
+    adminUserForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const newUser = {
+        name: document.getElementById('adminUserName').value.trim(),
+        studentId: document.getElementById('adminUserStudentId').value.trim(),
+        email: document.getElementById('adminUserEmail').value.trim(),
+        major: document.getElementById('adminUserMajor').value.trim(),
+        password: document.getElementById('adminUserPassword').value,
+        dateOfBirth: document.getElementById('adminUserDob').value
+      };
+
+      const finishAddUser = function() {
+        saveUser(newUser);
+        adminUserForm.reset();
+        alert('User added successfully.');
+        initializeAdminPage();
+      };
+
+      saveAdminUserOnServer(newUser).then(function(result) {
+        if (result && result.success === false) {
+          alert(result.message || 'User could not be saved.');
+          return;
+        }
+
+        finishAddUser();
+      }).catch(function() {
+        finishAddUser();
+      });
+    });
+  }
 }
 
 function renderRegistrations(container, registrations, isNew) {
@@ -492,16 +936,16 @@ function renderRegistrations(container, registrations, isNew) {
     const actions = document.createElement('div');
     actions.className = 'registration-actions';
 
-    const viewBtn = document.createElement('button');
-    viewBtn.className = 'view-btn';
-    viewBtn.textContent = 'View';
-    viewBtn.addEventListener('click', function() {
-      if (reg.event) {
-        showEventDetailsModal(reg.event);
-      }
-    });
-
-    actions.appendChild(viewBtn);
+   // 👁️ View
+const viewBtn = document.createElement('button');
+viewBtn.className = 'view-btn';
+viewBtn.textContent = 'View';
+viewBtn.addEventListener('click', function() {
+  if (reg.event) {
+    showEventDetailsModal(reg.event);
+  }
+});
+actions.appendChild(viewBtn);
 
     if (isNew) {
       const actionBtn = document.createElement('button');
@@ -519,11 +963,233 @@ function renderRegistrations(container, registrations, isNew) {
   });
 }
 
+function renderAdminRegistrations(container, registrations) {
+  container.innerHTML = '';
+
+  if (!registrations.length) {
+    container.innerHTML = '<div class="empty-list">No registrations found.</div>';
+    return;
+  }
+
+  const sortedRegistrations = registrations.slice().sort((a, b) => new Date(b.registeredAt) - new Date(a.registeredAt));
+  const today = new Date();
+
+  sortedRegistrations.forEach(reg => {
+    const event = getAllEvents().find(item => item.id === reg.selectedEventId);
+    const isPastEvent = reg.markedPast || (event ? new Date(event.date) < today : false);
+    const item = document.createElement('div');
+    item.className = 'registration-item admin-registration-item';
+
+    const meta = document.createElement('div');
+    meta.className = 'registration-meta';
+    meta.innerHTML = `
+      <strong>${event ? event.title : 'Unknown Event'}</strong>
+      <span>${reg.name || 'Unknown User'}</span>
+      <span>${reg.studentId || 'No Student ID'}</span>
+      <span>${event ? event.date : 'No date available'}</span>
+      <span>Status: ${isPastEvent ? 'Past' : 'Active'}</span>
+    `;
+
+    const actions = document.createElement('div');
+    actions.className = 'registration-actions';
+
+    const viewBtn = document.createElement('button');
+    viewBtn.className = 'view-btn';
+    viewBtn.textContent = 'View';
+    viewBtn.addEventListener('click', function() {
+      if (event) {
+        showEventDetailsModal(event);
+      }
+    });
+    actions.appendChild(viewBtn);
+
+    if (!isPastEvent) {
+      const pastBtn = document.createElement('button');
+      pastBtn.className = 'delete-btn';
+      pastBtn.textContent = 'Mark Past';
+      pastBtn.addEventListener('click', function() {
+        markRegistrationPast(reg.id);
+      });
+      actions.appendChild(pastBtn);
+    }
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'view-btn';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', function() {
+      deleteRegistration(reg.id);
+    });
+    actions.appendChild(removeBtn);
+
+    item.appendChild(meta);
+    item.appendChild(actions);
+    container.appendChild(item);
+  });
+}
+
+function renderAdminEvents(container) {
+  const events = getAllEvents();
+  container.innerHTML = '';
+
+  if (!events.length) {
+    container.innerHTML = '<div class="empty-list">No events found.</div>';
+    return;
+  }
+
+  events.forEach(event => {
+    const item = document.createElement('div');
+    item.className = 'registration-item admin-registration-item';
+
+    const meta = document.createElement('div');
+    meta.className = 'registration-meta';
+    meta.innerHTML = `
+      <strong>${event.title}</strong>
+      <span>${event.date}</span>
+      <span>${event.location}</span>
+      <span>${event.category}</span>
+    `;
+
+    const actions = document.createElement('div');
+    actions.className = 'registration-actions';
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', function() {
+      deleteEvent(event.id);
+    });
+
+    actions.appendChild(deleteBtn);
+    item.appendChild(meta);
+    item.appendChild(actions);
+    container.appendChild(item);
+  });
+}
+
+function renderAdminUsers(container, users) {
+  container.innerHTML = '';
+
+  if (!users.length) {
+    container.innerHTML = '<div class="empty-list">No users found.</div>';
+    return;
+  }
+
+  users.forEach(user => {
+    const item = document.createElement('div');
+    item.className = 'admin-user-card';
+    item.innerHTML = `
+      <strong>${user.name}</strong>
+      <span>Student ID: ${user.studentId}</span>
+      <span>Email: ${user.email}</span>
+      <span>Major: ${user.major}</span>
+    `;
+    container.appendChild(item);
+  });
+}
+
+function initializeAdminTabs() {
+  const tabs = document.querySelectorAll('.admin-tab');
+  const panels = document.querySelectorAll('.admin-panel');
+
+  tabs.forEach(tab => {
+    if (tab.dataset.bound === 'true') return;
+    tab.dataset.bound = 'true';
+
+    tab.addEventListener('click', function() {
+      const targetTab = tab.dataset.tab;
+
+      tabs.forEach(item => item.classList.remove('active'));
+      panels.forEach(panel => panel.classList.remove('active'));
+
+      tab.classList.add('active');
+
+      if (targetTab === 'event') {
+        document.getElementById('adminEventPanel').classList.add('active');
+      }
+
+      if (targetTab === 'user') {
+        document.getElementById('adminUserPanel').classList.add('active');
+      }
+    });
+  });
+}
+
+function createEventId(title) {
+  return `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Date.now()}`;
+}
+
+function formatDisplayDate(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) {
+    return dateValue;
+  }
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
 function deleteRegistration(registrationId) {
   const registrations = JSON.parse(localStorage.getItem('registrations') || '[]');
   const filtered = registrations.filter(reg => reg.id !== registrationId);
   localStorage.setItem('registrations', JSON.stringify(filtered));
-  initializeDashboardPage();
+  refreshManagementPages();
+}
+
+function deleteEvent(eventId) {
+  if (!confirm('Delete this event?')) {
+    return;
+  }
+
+  const finishDelete = function() {
+    const adminEvents = getAdminEvents().filter(event => event.id !== eventId);
+    const deletedEventIds = JSON.parse(localStorage.getItem('deletedEventIds') || '[]');
+    const registrations = JSON.parse(localStorage.getItem('registrations') || '[]');
+
+    localStorage.setItem('adminEvents', JSON.stringify(adminEvents));
+    localStorage.setItem('deletedEventIds', JSON.stringify([...new Set([...deletedEventIds, eventId])]));
+    localStorage.setItem(
+      'registrations',
+      JSON.stringify(registrations.filter(reg => reg.selectedEventId !== eventId))
+    );
+
+    refreshManagementPages();
+  };
+
+  fetch(`../php/delete_event.php?id=${encodeURIComponent(eventId)}`, {
+    credentials: 'same-origin',
+    cache: 'no-store',
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  }).then(function(response) {
+    return response.text().then(function(text) {
+      let result = null;
+      try {
+        result = JSON.parse(text);
+      } catch (error) {
+        result = null;
+      }
+
+      if (result && result.success === false) {
+        throw new Error(result.message || 'Event could not be deleted.');
+      }
+      if (!response.ok) {
+        throw new Error('Event could not be deleted.');
+      }
+    });
+  }).then(function() {
+    finishDelete();
+  }).catch(function(error) {
+    if (error && error.message === 'Access denied.') {
+      alert(error.message);
+      return;
+    }
+
+    finishDelete();
+  });
 }
 
 function markRegistrationPast(registrationId) {
@@ -535,18 +1201,192 @@ function markRegistrationPast(registrationId) {
     return reg;
   });
   localStorage.setItem('registrations', JSON.stringify(updated));
-  initializeDashboardPage();
+  refreshManagementPages();
+}
+
+function refreshManagementPages() {
+  if (document.getElementById('dashboardPage')) {
+    initializeDashboardPage();
+  }
+
+  if (document.getElementById('adminPage')) {
+    initializeAdminPage();
+  }
+}
+
+function renderEventsGrid() {
+  const eventsGrid = document.getElementById('eventsGrid');
+  if (!eventsGrid) return;
+
+  const events = getAllEvents();
+  eventsGrid.innerHTML = '';
+
+  events.forEach(event => {
+    const card = document.createElement('div');
+    card.className = 'event-card';
+    card.dataset.id = event.id;
+    card.dataset.category = event.category.toLowerCase();
+    card.dataset.date = formatEventDatasetDate(event.date);
+
+    card.innerHTML = `
+      <div class="event-card-image"></div>
+      <div class="event-card-content">
+        <h3 class="event-card-title">${event.title}</h3>
+        <p class="event-card-date">${event.date}</p>
+        <div class="event-card-buttons">
+          <button type="button" class="event-btn event-details-btn">View Details</button>
+          <button type="button" class="event-btn event-register-btn">Register</button>
+        </div>
+      </div>
+    `;
+
+    eventsGrid.appendChild(card);
+  });
+}
+
+function formatEventDatasetDate(dateString) {
+  const parsedDate = new Date(dateString);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return dateString;
+  }
+  return parsedDate.toISOString().split('T')[0];
+}
+
+function initializeCalendarPage() {
+  const calendarGrid = document.getElementById('calendarGrid');
+  const dayLabels = document.getElementById('calendarDayLabels');
+  const monthLabel = document.getElementById('calendarMonthLabel');
+  const prevBtn = document.getElementById('calendarPrevBtn');
+  const nextBtn = document.getElementById('calendarNextBtn');
+
+  if (!calendarGrid || !dayLabels || !monthLabel) return;
+
+  const allEvents = getAllEvents()
+    .map(event => ({
+      ...event,
+      parsedDate: new Date(event.date)
+    }))
+    .filter(event => !Number.isNaN(event.parsedDate.getTime()));
+
+  const firstEventDate = allEvents.length
+    ? allEvents.slice().sort((a, b) => a.parsedDate - b.parsedDate)[0].parsedDate
+    : new Date();
+
+  const state = {
+    year: firstEventDate.getFullYear(),
+    month: firstEventDate.getMonth()
+  };
+
+  renderCalendarDayLabels(dayLabels);
+  renderCalendarMonth();
+
+  if (prevBtn && !prevBtn.dataset.bound) {
+    prevBtn.dataset.bound = 'true';
+    prevBtn.addEventListener('click', function() {
+      state.month -= 1;
+      if (state.month < 0) {
+        state.month = 11;
+        state.year -= 1;
+      }
+      renderCalendarMonth();
+    });
+  }
+
+  if (nextBtn && !nextBtn.dataset.bound) {
+    nextBtn.dataset.bound = 'true';
+    nextBtn.addEventListener('click', function() {
+      state.month += 1;
+      if (state.month > 11) {
+        state.month = 0;
+        state.year += 1;
+      }
+      renderCalendarMonth();
+    });
+  }
+
+  function renderCalendarMonth() {
+    const firstDay = new Date(state.year, state.month, 1);
+    const daysInMonth = new Date(state.year, state.month + 1, 0).getDate();
+    const startDay = firstDay.getDay();
+
+    monthLabel.textContent = firstDay.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric'
+    });
+
+    calendarGrid.innerHTML = '';
+
+    for (let i = 0; i < startDay; i += 1) {
+      const emptyCell = document.createElement('div');
+      emptyCell.className = 'calendar-cell calendar-cell--empty';
+      calendarGrid.appendChild(emptyCell);
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const dayDate = new Date(state.year, state.month, day);
+      const dayEvents = allEvents.filter(event =>
+        event.parsedDate.getFullYear() === dayDate.getFullYear() &&
+        event.parsedDate.getMonth() === dayDate.getMonth() &&
+        event.parsedDate.getDate() === dayDate.getDate()
+      );
+
+      const dayCell = document.createElement('div');
+      dayCell.className = 'calendar-cell';
+
+      if (dayEvents.length) {
+        dayCell.classList.add('calendar-cell--event');
+      }
+
+      const dayNumber = document.createElement('span');
+      dayNumber.className = 'calendar-day-number';
+      dayNumber.textContent = String(day);
+      dayCell.appendChild(dayNumber);
+
+      dayEvents.forEach(event => {
+        const eventButton = document.createElement('button');
+        eventButton.type = 'button';
+        eventButton.className = 'calendar-event-pill';
+        eventButton.textContent = event.title;
+        eventButton.addEventListener('click', function() {
+          showEventDetailsModal(event);
+        });
+        dayCell.appendChild(eventButton);
+      });
+
+      calendarGrid.appendChild(dayCell);
+    }
+  }
+}
+
+function renderCalendarDayLabels(container) {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  container.innerHTML = '';
+
+  days.forEach(day => {
+    const label = document.createElement('div');
+    label.className = 'calendar-day-label';
+    label.textContent = day;
+    container.appendChild(label);
+  });
 }
 
 function showEventDetailsModal(event) {
   const modal = document.getElementById('eventDetailsModal');
   if (!modal) return;
+  const registerButton = document.getElementById('modalRegisterBtn');
 
   document.getElementById('modalEventTitle').textContent = event.title;
   document.getElementById('modalEventDate').textContent = event.date;
   document.getElementById('modalEventLocation').textContent = event.location;
   document.getElementById('modalEventCategory').textContent = event.category;
   document.getElementById('modalEventDescription').textContent = event.description;
+
+  if (registerButton) {
+    registerButton.onclick = function() {
+      closeEventDetailsModal();
+      registerForEvent(event.id, event.title);
+    };
+  }
 
   modal.classList.add('active');
 }

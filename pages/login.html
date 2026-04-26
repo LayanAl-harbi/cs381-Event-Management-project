@@ -12,23 +12,30 @@
       <span class="logo">YIC Events</span>
       <nav class="top-nav">
         <a href="../pages/home.html">Home</a>
+        <a href="events.html">Events</a>
+        <a href="calendar.html">Calendar</a>
         <a href="login.html" class="active">Login</a>
+        <a href="admin.html">Admin</a>
       </nav>
     </div>
   </header>
 
   <main class="container">
     <section class="login-card card card--wide card--decor">
+      <div class="dashboard-title">
+        <a href="../pages/home.html" class="dashboard-events-btn">Back</a>
+      </div>
+
       <h2>User Login Page</h2>
 
-      <form class="login-form" id="loginForm">
+      <form action="../php/login_process.php" method="POST" class="login-form" id="loginForm">
         <label>
           Student ID:
-          <input type="text" id="loginStudentId" placeholder="Enter your student ID" required />
+          <input type="text" id="loginStudentId" name="student_id" placeholder="Enter your student ID" required />
         </label>
         <label>
           Password:
-          <input type="password" id="loginPassword" placeholder="XXXXXXXXX" required />
+          <input type="password" id="loginPassword" name="password" placeholder="XXXXXXXXX" required />
         </label>
 
         <button type="submit" class="btn login-btn">Login</button>

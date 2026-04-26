@@ -6,6 +6,20 @@
   <title>YIC Events | Events</title>
   <link rel="stylesheet" href="../css/style.css" />
 </head>
+<div class="modal-overlay" id="eventDetailsModal">
+  <div class="modal-card">
+    <button class="close-modal" onclick="closeEventDetailsModal()">✕</button>
+    <h3 id="modalEventTitle">Event Title</h3>
+
+    <div class="modal-event-details">
+      <p><strong>Date:</strong> <span id="modalEventDate"></span></p>
+      <p><strong>Location:</strong> <span id="modalEventLocation"></span></p>
+      <p><strong>Category:</strong> <span id="modalEventCategory"></span></p>
+      <p><strong>Description:</strong></p>
+      <p id="modalEventDescription"></p>
+    </div>
+  </div>
+</div>
 <body>
   <header class="site-header">
     <div class="container header-inner">
@@ -13,8 +27,9 @@
       <nav class="top-nav">
         <a href="../pages/home.html">Home</a>
         <a href="events.html" class="active">Events</a>
+        <a href="calendar.html">Calendar</a>
         <a href="dashboard.html">Dashboard</a>
-        <a href="login.html">Logout</a>
+        <a href="../php/logout.php">Logout</a>
       </nav>
     </div>
   </header>
@@ -22,6 +37,7 @@
   <main class="container">
     <!-- Search and Filter Section -->
     <div class="events-header">
+      <a href="dashboard.html" class="dashboard-events-btn">Back</a>
       <div class="search-bar">
         <input type="text" class="search-input" placeholder="Enter keyword" />
         <select class="filter-dropdown">
