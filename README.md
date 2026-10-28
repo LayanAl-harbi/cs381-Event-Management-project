@@ -122,4 +122,3 @@ After logging in, the admin can manage events and users through `Pages/admin.htm
 - Layan 441500004
 - Nada 441500071
 
-https://drive.google.com/file/d/1WLK52cRPNia45iDLvVxliJzlhOsdCbaH/view?usp=drivesdk
