@@ -1,35 +1,28 @@
 <?php
 session_start();
-
-$employee_id = trim($_POST["employee_id"] ?? "");
-$password = $_POST["password"] ?? "";
-$is_ajax = strtolower($_SERVER["HTTP_X_REQUESTED_WITH"] ?? "") === "xmlhttprequest";
-
-if ($employee_id === "EMP001" && $password === "admin123") {
-    $_SESSION["user_id"] = "admin";
-    $_SESSION["student_id"] = $employee_id;
-    $_SESSION["user_name"] = "Admin";
-    $_SESSION["role"] = "admin";
-
-    if ($is_ajax) {
-        header("Content-Type: application/json");
-        echo json_encode(["success" => true]);
-        exit();
+require_once __DIR__ . "/../config/db.php";
+header("Content-Type: application/json");
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    echo json_encode(["success" => false, "message" => "Invalid request method."]);
+    exit();
+}
+$employee_id = trim($_POST['employee_id'] ?? '');
+$password = $_POST['password'] ?? '';
+if (empty($employee_id) || empty($password)) {
+    echo json_encode(["success" => false, "message" => "Please enter ID and password."]);
+    exit();
+}
+// Login check for the single admin in the system
+if ($employee_id === 'EMP001' && $password === 'admin123') {
+    $_SESSION['role'] = 'admin';
+    $_SESSION['employee_id'] = $employee_id;
+    $_SESSION['is_admin'] = true;
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
-
-    header("Location: ../pages/admin.html");
+    echo json_encode(["success" => true, "message" => "Login successful.", "csrf_token" => $_SESSION['csrf_token']]);
     exit();
 }
-
-if ($is_ajax) {
-    http_response_code(401);
-    header("Content-Type: application/json");
-    echo json_encode([
-        "success" => false,
-        "message" => "Invalid admin login."
-    ]);
-    exit();
-}
-
-echo "Invalid admin login.";
+echo json_encode(["success" => false, "message" => "Invalid admin credentials."]);
+exit();
 ?>

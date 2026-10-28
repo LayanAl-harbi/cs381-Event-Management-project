@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -11,23 +11,18 @@
     <div class="container header-inner">
       <span class="logo">YIC Events</span>
       <nav class="top-nav">
-        <a href="../pages/home.html">Home</a>
-        <a href="events.html">Events</a>
-        <a href="calendar.html">Calendar</a>
+        <a href="home.html">Home</a>
         <a href="login.html" class="active">Login</a>
-        <a href="admin.html">Admin</a>
+       
       </nav>
     </div>
   </header>
-
   <main class="container">
     <section class="login-card card card--wide card--decor">
       <div class="dashboard-title">
-        <a href="../pages/home.html" class="dashboard-events-btn">Back</a>
+        <a href="home.html" class="dashboard-events-btn">Back</a>
       </div>
-
       <h2>User Login Page</h2>
-
       <form action="../php/login_process.php" method="POST" class="login-form" id="loginForm">
         <label>
           Student ID:
@@ -37,14 +32,11 @@
           Password:
           <input type="password" id="loginPassword" name="password" placeholder="XXXXXXXXX" required />
         </label>
-
         <button type="submit" class="btn login-btn">Login</button>
       </form>
-
       <p class="register-text">Don't have an account? <a href="register.html">Register</a></p>
     </section>
   </main>
-
   <div class="modal-overlay" id="confirmationModal">
     <div class="modal-card">
       <h3 id="modalTitle">Confirmation</h3>
@@ -55,7 +47,6 @@
       </div>
     </div>
   </div>
-
   <footer class="site-footer">
     <p>YIC Events</p>
     <p>Layan 441500004 ~ Nada 441500071</p>

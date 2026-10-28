@@ -1,10 +1,7 @@
 <?php
 session_start();
-
-/* Remove all session variables */
+$redirect = isset($_SESSION['role']) && $_SESSION['role'] === 'admin' ? '../Pages/admin.html' : '../Pages/login.html';
 $_SESSION = [];
-
-/* Remove the session cookie */
 if (ini_get("session.use_cookies")) {
     $params = session_get_cookie_params();
     setcookie(
@@ -17,26 +14,6 @@ if (ini_get("session.use_cookies")) {
         $params["httponly"]
     );
 }
-
-/* Destroy the session */
 session_destroy();
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Logging out...</title>
-  <meta http-equiv="refresh" content="1; url=../pages/login.html" />
-</head>
-<body>
-  <script>
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('selectedEventId');
-    localStorage.setItem('isAdminAuthenticated', 'false');
-    window.location.replace('../pages/login.html');
-  </script>
-  <p>Logging out...</p>
-  <p><a href="../pages/login.html">Go to login</a></p>
-</body>
-</html>
+header("Location: $redirect");
+exit();

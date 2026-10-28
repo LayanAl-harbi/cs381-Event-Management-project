@@ -11,15 +11,10 @@
     <div class="container header-inner">
       <span class="logo">YIC Events</span>
       <nav class="top-nav">
-        <a href="../pages/home.html">Home</a>
-        <a href="events.html">Events</a>
-        <a href="calendar.html">Calendar</a>
-        <a href="dashboard.html">Dashboard</a>
         <a href="admin.html" class="active">Admin</a>
       </nav>
     </div>
   </header>
-
   <main class="container">
     <section class="dashboard-card card card--wide card--decor admin-page" id="adminPage">
       <div class="admin-login-gate" id="adminLoginGate">
@@ -32,7 +27,6 @@
             <a href="home.html" class="dashboard-events-btn">Back</a>
           </div>
         </div>
-
         <form class="admin-form" id="adminLoginForm">
           <div class="admin-form-grid">
             <label>
@@ -45,11 +39,9 @@
             </label>
           </div>
 
-          <p class="admin-login-note">Employee login: EMP001 / admin123</p>
           <button type="submit" class="btn login-btn">Login as Admin</button>
         </form>
       </div>
-
       <div id="adminContent" style="display: none;">
         <div class="dashboard-title">
           <div class="admin-heading">
@@ -58,25 +50,22 @@
           </div>
           <div class="dashboard-title-actions">
             <a href="home.html" class="dashboard-events-btn">Back</a>
-            <a href="events.html" class="dashboard-events-btn">Browse Events</a>
-            <a href="calendar.html" class="dashboard-events-btn">Calendar</a>
+            <a href="events.html?from=admin" class="dashboard-events-btn">Browse Events</a>
+            <a href="calendar.html?from=admin" class="dashboard-events-btn">Calendar</a>
             <a href="../php/logout.php" class="dashboard-events-btn" id="adminLogoutBtn">Logout</a>
           </div>
         </div>
-
         <div class="admin-section-card">
           <div class="admin-section-header">
             <h3>Quick Add</h3>
             <p>Use the tabs to add a new event or create a user account.</p>
           </div>
-
           <div class="admin-tabs">
             <button type="button" class="admin-tab active" data-tab="event">Add Event</button>
             <button type="button" class="admin-tab" data-tab="user">Add User</button>
           </div>
-
           <div class="admin-panel active" id="adminEventPanel">
-            <form action="../php/add_event.php" method="POST" class="admin-form" id="adminEventForm">
+            <form action="../php/add_event.php" method="POST" class="admin-form" id="adminEventForm" enctype="multipart/form-data">
               <input type="hidden" id="adminEventGeneratedId" name="event_id" />
               <div class="admin-form-grid">
                 <label>
@@ -94,23 +83,25 @@
                 <label>
                   Category:
                   <select id="adminEventCategory" name="category" required>
-                    <option value="">Select category</option>
+                    <option value="">Category</option>
                     <option value="Sports">Sports</option>
                     <option value="Academic">Academic</option>
                     <option value="Social">Social</option>
                     <option value="Cultural">Cultural</option>
                   </select>
                 </label>
+                <label>
+                  Event Image:
+                  <input type="file" id="adminEventImage" name="image" accept="image/*" />
+                </label>
                 <label class="admin-form-full">
                   Description:
                   <textarea id="adminEventDescription" name="description" placeholder="Enter event description" rows="5" required></textarea>
                 </label>
               </div>
-
               <button type="submit" class="btn login-btn">Save Event</button>
             </form>
           </div>
-
           <div class="admin-panel" id="adminUserPanel">
             <form action="../php/add_user.php" method="POST" class="admin-form" id="adminUserForm">
               <input type="hidden" name="role" value="user" />
@@ -136,22 +127,23 @@
                   <input type="password" id="adminUserPassword" name="password" placeholder="Create password" required />
                 </label>
                 <label>
+                  Confirm Password:
+                  <input type="password" id="adminUserConfirmPassword" name="confirm_password" placeholder="Confirm password" minlength="8" required />
+                </label>
+                <label>
                   Date of Birth:
                   <input type="date" id="adminUserDob" name="date_of_birth" required />
                 </label>
               </div>
-
               <button type="submit" class="btn login-btn">Save User</button>
             </form>
           </div>
         </div>
-
         <div class="admin-section-card">
           <div class="admin-section-header">
             <h3>Overview</h3>
             <p>A quick summary of the current event system data.</p>
           </div>
-
           <div class="admin-stats">
             <div class="admin-stat-card">
               <span class="admin-stat-label">Total Events</span>
@@ -166,7 +158,6 @@
               <strong id="adminTotalRegistrations">0</strong>
             </div>
           </div>
-
           <div class="admin-grid">
             <div class="dashboard-section">
               <div class="section-header">
@@ -174,14 +165,12 @@
               </div>
               <div class="registration-list" id="adminEventsList"></div>
             </div>
-
             <div class="dashboard-section">
               <div class="section-header">
                 <h3>All Registrations</h3>
               </div>
               <div class="registration-list" id="adminRegistrations"></div>
             </div>
-
             <div class="dashboard-section">
               <div class="section-header">
                 <h3>Registered Users</h3>
@@ -193,7 +182,6 @@
       </div>
     </section>
   </main>
-
   <div class="modal-overlay" id="eventDetailsModal">
     <div class="modal-card">
       <button class="close-modal" onclick="closeEventDetailsModal()">&times;</button>
@@ -208,12 +196,10 @@
       </div>
     </div>
   </div>
-
   <footer class="site-footer">
     <p>YIC Events</p>
     <p>Layan 441500004 ~ Nada 441500071</p>
   </footer>
-
-  <script src="../js/script.js"></script>
+  <script src="../js/script.js?v=3"></script>
 </body>
 </html>
